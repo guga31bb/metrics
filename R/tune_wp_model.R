@@ -58,7 +58,7 @@ full_train = xgboost::xgb.DMatrix(model.matrix(~.+0, data = model_data %>% selec
                                   label = model_data$label)
 
 #params
-nrounds = 5000
+nrounds = 15000
 
 
 # #################################################################################
