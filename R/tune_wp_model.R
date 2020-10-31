@@ -68,7 +68,7 @@ grid <- dials::grid_latin_hypercube(
   dials::finalize(dials::mtry(), model_data %>% select(-season, -label)),
   dials::min_n(),
   dials::tree_depth(),
-  dials::learn_rate(range = c(-3, -1), trans = log10_trans()),
+  dials::learn_rate(range = c(-3, -1), trans = dials::log10_trans()),
   dials::loss_reduction(),
   sample_size = dials::sample_prop(),
   size = 40
