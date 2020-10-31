@@ -130,11 +130,11 @@ get_metrics <- function(df, row = 1) {
   this_param <- bind_rows(output)
   
   if (row == 1) {
-    saveRDS(this_param, "data-raw/modeling.rds")
+    saveRDS(this_param, "modeling.rds")
   } else {
-    prev <- readRDS("data-raw/modeling.rds")
+    prev <- readRDS("modeling.rds")
     for_save <- bind_rows(prev, this_param)
-    saveRDS(for_save, "data-raw/modeling.rds")
+    saveRDS(for_save, "modeling.rds")
   }
   
   return(this_param)
