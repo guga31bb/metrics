@@ -1,5 +1,6 @@
-library(tidyverse)
-# library(tidymodels)
+suppressMessages(
+  library(tidyverse)
+)
 source('https://raw.githubusercontent.com/mrcaseb/nflfastR/master/R/helper_add_ep_wp.R')
 source('https://raw.githubusercontent.com/mrcaseb/nflfastR/master/R/helper_add_nflscrapr_mutations.R')
 
@@ -93,7 +94,8 @@ grid <- grid %>%
 #     sample_size = 0.7204741
 #   )
 
-grid
+grid %>%
+  head(20)
 
 # function to search over hyperparameter grid
 get_metrics <- function(df, row = 1) {
