@@ -68,19 +68,15 @@ grid <- dials::grid_latin_hypercube(
   dials::finalize(dials::mtry(), model_data %>% select(-season, -label)),
   dials::min_n(),
   dials::tree_depth(),
-  dials::learn_rate(),
+  dials::learn_rate(range = c(-3, -1), trans = log10_trans()),
   dials::loss_reduction(),
   sample_size = dials::sample_prop(),
   size = 40
-)
-grid$learn_rate <- runif(nrow(grid), min = .001, max = .05)
-
-grid <- grid %>%
+) %>%
   mutate(
     # has to be between 0 and 1
     mtry = mtry / length(model_data  %>% select(-season, -label))
   )
-
 
 # # bonus round at the end: do more searching after finding good ones
 # grid <- grid %>%
@@ -122,7 +118,7 @@ get_metrics <- function(df, row = 1) {
   #train
   wp_cv_model <- xgboost::xgb.cv(data = full_train, params = params, nrounds = nrounds,
                                  folds = folds, metrics = list("logloss"),
-                                 early_stopping_rounds = 10, print_every_n = 10)
+                                 early_stopping_rounds = 20, print_every_n = 50)
   
   output <- params
   output$iter = wp_cv_model$best_iteration
