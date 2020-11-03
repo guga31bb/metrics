@@ -12,8 +12,6 @@ if (grepl("Documents", getwd())){
   thread <- 6
 }
 
-# monotonicity
-
 # total points scored
 
 model_data <-
@@ -24,7 +22,14 @@ model_data <-
   prepare_wp_data() %>%
   # new- need to change in wp function and elsewhere too
   mutate(
-    receive_2h_ko = if_else(qtr > 2, 2, receive_2h_ko)
+    receive_2h_ko = if_else(qtr > 2, 2, receive_2h_ko),
+    # win conditions
+    can_win = case_when(
+      down == 1 & score_differential > 0 & game_seconds_remaining < 120 & defteam_timeouts_remaining == 0 ~ 1,
+      down == 1 & score_differential > 0 & game_seconds_remaining < 84 & defteam_timeouts_remaining == 1 ~ 1,
+      down == 1 & score_differential > 0 & game_seconds_remaining < 42 & defteam_timeouts_remaining == 2 ~ 1,
+      TRUE ~ 0
+    )
     ) %>%
   #
   mutate(label = ifelse(posteam == Winner, 1, 0)) %>%
@@ -44,6 +49,7 @@ model_data <-
     yardline_100,
     posteam_timeouts_remaining,
     defteam_timeouts_remaining,
+    can_win,
     season
   )
 
@@ -111,9 +117,24 @@ get_metrics <- function(df, row = 1) {
       max_depth = df$tree_depth,
       min_child_weight = df$min_n,
       monotone_constraints = 
-        "(0, 1, 0, 1, 0, 0, 1, 1, -1, -1, -1, 1, -1)",
+        "(0, 0, 0, 1, 0, 0, 1, 1, -1, -1, -1, 1, -1, 0)",
       nthread = thread
     )
+  # 
+  # receive_2h_ko, 0
+  # spread_time, 0
+  # total_line, 0
+  # home, 1
+  # half_seconds_remaining, 0
+  # game_seconds_remaining, 0
+  # ExpScoreDiff_Time_Ratio, 1
+  # score_differential, 1
+  # down, -1 
+  # ydstogo, -1
+  # yardline_100, -1
+  # posteam_timeouts_remaining, 1
+  # defteam_timeouts_remaining, -1
+  # can_win, 0
 
   #train
   wp_cv_model <- xgboost::xgb.cv(data = full_train, params = params, nrounds = nrounds,
