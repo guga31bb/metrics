@@ -9,7 +9,7 @@ set.seed(2013)
 if (grepl("Documents", getwd())){
   thread <- 4
 } else { ### server
-  thread <- 5
+  thread <- 6
 }
 
 # total points scored
@@ -83,6 +83,8 @@ grid <- dials::grid_latin_hypercube(
     # has to be between 0 and 1
     mtry = mtry / length(model_data  %>% select(-season, -label))
   )
+
+rm(model_data)
 
 # # bonus round at the end: do more searching after finding good ones
 # grid <- grid %>%
