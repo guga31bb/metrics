@@ -9,7 +9,7 @@ set.seed(2013)
 if (grepl("Documents", getwd())){
   thread <- 4
 } else { ### server
-  thread <- 6
+  thread <- 5
 }
 
 # total points scored
