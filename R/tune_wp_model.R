@@ -165,6 +165,7 @@ get_metrics <- function(df, row = 1) {
 # get results
 results <- map_df(1 : nrow(grid), function(x) {
   
+  gc()
   message(glue::glue("Row {x}"))
   get_metrics(grid %>% dplyr::slice(x), row = x)
   
