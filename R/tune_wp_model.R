@@ -68,7 +68,7 @@ nrounds = 15000
 
 
 # #################################################################################
-# try tidymodels
+# get tuning grid
 
 grid <- dials::grid_latin_hypercube(
   dials::finalize(dials::mtry(), model_data %>% select(-season, -label)),
@@ -119,17 +119,17 @@ get_metrics <- function(df, row = 1) {
       max_depth = df$tree_depth,
       min_child_weight = df$min_n,
       monotone_constraints = 
-        "(0, 0, 0, 1, 0, 0, 1, 1, -1, -1, -1, 1, -1, 0)",
+        "(0, 0, 0, 0, 0, 0, 0, 1, -1, -1, -1, 1, -1, 0)",
       nthread = thread
     )
   # 
   # receive_2h_ko, 0
   # spread_time, 0
   # total_line, 0
-  # home, 1
+  # home, 0
   # half_seconds_remaining, 0
   # game_seconds_remaining, 0
-  # ExpScoreDiff_Time_Ratio, 1
+  # ExpScoreDiff_Time_Ratio, 0
   # score_differential, 1
   # down, -1 
   # ydstogo, -1
@@ -162,8 +162,13 @@ get_metrics <- function(df, row = 1) {
   
 }
 
+# do this piece by piece so server doesn't die
+# actual code:
+# 1 : nrow(grid)
+
+
 # get results
-results <- map_df(1 : nrow(grid), function(x) {
+results <- map_df(1 : 8, function(x) {
   
   gc()
   message(glue::glue("Row {x}"))
