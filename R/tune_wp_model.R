@@ -22,12 +22,15 @@ model_data <-
   prepare_wp_data() %>%
   # new- need to change in wp function and elsewhere too
   mutate(
-    receive_2h_ko = if_else(qtr > 2, 2, receive_2h_ko),
     # win conditions
     can_win = case_when(
       down == 1 & score_differential > 0 & game_seconds_remaining < 120 & defteam_timeouts_remaining == 0 ~ 1,
       down == 1 & score_differential > 0 & game_seconds_remaining < 84 & defteam_timeouts_remaining == 1 ~ 1,
       down == 1 & score_differential > 0 & game_seconds_remaining < 42 & defteam_timeouts_remaining == 2 ~ 1,
+      
+      down == 2 & score_differential > 0 & game_seconds_remaining < 84 & defteam_timeouts_remaining == 0 ~ 1,
+      score_differential > 0 & game_seconds_remaining < 42 & defteam_timeouts_remaining == 0 ~ 1,
+      
       TRUE ~ 0
     )
     ) %>%
@@ -73,7 +76,7 @@ nrounds = 15000
 grid <- dials::grid_latin_hypercube(
   dials::finalize(dials::mtry(), model_data %>% select(-season, -label)),
   dials::min_n(),
-  dials::tree_depth(),
+  # dials::tree_depth(),
   dials::learn_rate(range = c(-3, -1), trans = scales::log10_trans()),
   dials::loss_reduction(),
   sample_size = dials::sample_prop(),
@@ -81,7 +84,8 @@ grid <- dials::grid_latin_hypercube(
 ) %>%
   mutate(
     # has to be between 0 and 1
-    mtry = mtry / length(model_data  %>% select(-season, -label))
+    mtry = mtry / length(model_data  %>% select(-season, -label)),
+    tree_depth = 5
   )
 
 rm(model_data)
@@ -168,7 +172,7 @@ get_metrics <- function(df, row = 1) {
 
 
 # get results
-results <- map_df(9 : 16, function(x) {
+results <- map_df(1 : 8, function(x) {
   
   gc()
   message(glue::glue("Row {x}"))
