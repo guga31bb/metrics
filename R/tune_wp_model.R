@@ -172,7 +172,7 @@ get_metrics <- function(df, row = 1) {
 
 
 # get results
-results <- map_df(17 : 24, function(x) {
+results <- map_df(25 : 31, function(x) {
   
   gc()
   message(glue::glue("Row {x}"))
