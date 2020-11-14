@@ -41,7 +41,7 @@ model_data <-
     label,
     receive_2h_ko,
     spread_time,
-    total_line,
+    # total_line,
     home,
     half_seconds_remaining,
     game_seconds_remaining,
@@ -123,13 +123,12 @@ get_metrics <- function(df, row = 1) {
       max_depth = df$tree_depth,
       min_child_weight = df$min_n,
       monotone_constraints = 
-        "(0, 0, 0, 0, 0, 0, 0, 1, -1, -1, -1, 1, -1, 0)",
+        "(0, 0, 0, 0, 0, 0, 1, -1, -1, -1, 1, -1, 0)",
       nthread = thread
     )
   # 
   # receive_2h_ko, 0
   # spread_time, 0
-  # total_line, 0
   # home, 0
   # half_seconds_remaining, 0
   # game_seconds_remaining, 0
@@ -172,7 +171,7 @@ get_metrics <- function(df, row = 1) {
 
 
 # get results
-results <- map_df(25 : 31, function(x) {
+results <- map_df(1 : 10, function(x) {
   
   gc()
   message(glue::glue("Row {x}"))
