@@ -1,8 +1,12 @@
+# #################################################################################
+# set up data
+
 suppressMessages(
   library(tidyverse)
 )
 source('https://raw.githubusercontent.com/mrcaseb/nflfastR/master/R/helper_add_ep_wp.R')
 source('https://raw.githubusercontent.com/mrcaseb/nflfastR/master/R/helper_add_nflscrapr_mutations.R')
+
 
 set.seed(2013)
 
@@ -12,53 +16,39 @@ if (grepl("Documents", getwd())){
   thread <- 6
 }
 
-# total points scored
 
+# get everything ready
 model_data <-
-  # readRDS('cal_data.rds') %>%
-  readRDS(url('https://github.com/guga31bb/nflfastR-data/blob/master/models/cal_data.rds?raw=true')) %>%
+  # readRDS('wp_tuning/cal_data.rds') %>%
+  readRDS(url('https://github.com/guga31bb/metrics/blob/master/wp_tuning/cal_data.rds?raw=true')) %>%
   filter(Winner != "TIE") %>%
   make_model_mutations() %>%
   prepare_wp_data() %>%
-  # new- need to change in wp function and elsewhere too
   mutate(
-    # win conditions
-    can_win = case_when(
-      down == 1 & score_differential > 0 & game_seconds_remaining < 120 & defteam_timeouts_remaining == 0 ~ 1,
-      down == 1 & score_differential > 0 & game_seconds_remaining < 84 & defteam_timeouts_remaining == 1 ~ 1,
-      down == 1 & score_differential > 0 & game_seconds_remaining < 42 & defteam_timeouts_remaining == 2 ~ 1,
-      
-      down == 2 & score_differential > 0 & game_seconds_remaining < 84 & defteam_timeouts_remaining == 0 ~ 1,
-      score_differential > 0 & game_seconds_remaining < 42 & defteam_timeouts_remaining == 0 ~ 1,
-      
-      TRUE ~ 0
-    )
+    label = ifelse(posteam == Winner, 1, 0),
+    Diff_Time_Ratio = score_differential / (exp(-4 * elapsed_share))
     ) %>%
-  #
-  mutate(label = ifelse(posteam == Winner, 1, 0)) %>%
   filter(!is.na(ep) & !is.na(score_differential) & !is.na(play_type) & !is.na(label) & !is.na(yardline_100), qtr <= 4) %>%
   select(
     label,
     receive_2h_ko,
     spread_time,
-    # total_line,
     home,
     half_seconds_remaining,
     game_seconds_remaining,
-    ExpScoreDiff_Time_Ratio,
+    Diff_Time_Ratio,
     score_differential,
     down,
     ydstogo,
     yardline_100,
     posteam_timeouts_remaining,
     defteam_timeouts_remaining,
-    can_win,
     season
   )
 
-
+# data now uses 2001 - 2020
 folds <- map(0:9, function(x) {
-  f <- which(model_data$season %in% c(2000 + x, 2010 + x))
+  f <- which(model_data$season %in% c(2001 + x, 2011 + x))
   return(f)
 })
 
@@ -77,7 +67,7 @@ grid <- dials::grid_latin_hypercube(
   dials::finalize(dials::mtry(), model_data %>% select(-season, -label)),
   dials::min_n(),
   # dials::tree_depth(),
-  dials::learn_rate(range = c(-3, -1), trans = scales::log10_trans()),
+  # dials::learn_rate(range = c(-3, -1), trans = scales::log10_trans()),
   dials::loss_reduction(),
   sample_size = dials::sample_prop(),
   size = 40
@@ -85,7 +75,8 @@ grid <- dials::grid_latin_hypercube(
   mutate(
     # has to be between 0 and 1
     mtry = mtry / length(model_data  %>% select(-season, -label)),
-    tree_depth = 5
+    tree_depth = 5,
+    learn_rate = 0.2
   )
 
 rm(model_data)
@@ -101,6 +92,7 @@ rm(model_data)
 #     loss_reduction = 3.445502e-01,
 #     sample_size = 0.7204741
 #   )
+
 
 grid %>%
   head(20)
@@ -122,29 +114,34 @@ get_metrics <- function(df, row = 1) {
       colsample_bytree= df$mtry,
       max_depth = df$tree_depth,
       min_child_weight = df$min_n,
+      nthread = thread,
       monotone_constraints = 
-        "(0, 0, 0, 0, 0, 0, 1, -1, -1, -1, 1, -1, 0)",
-      nthread = thread
+        "(0, 0, 0, 
+        0, 0, 1, 
+        1, -1, -1, 
+        -1, 1, -1)"
     )
-  # 
+  
   # receive_2h_ko, 0
   # spread_time, 0
   # home, 0
+  
   # half_seconds_remaining, 0
   # game_seconds_remaining, 0
-  # ExpScoreDiff_Time_Ratio, 0
+  # Diff_Time_Ratio, 1
+  
   # score_differential, 1
-  # down, -1 
+  # down, -1
   # ydstogo, -1
+  
   # yardline_100, -1
   # posteam_timeouts_remaining, 1
   # defteam_timeouts_remaining, -1
-  # can_win, 0
 
   #train
   wp_cv_model <- xgboost::xgb.cv(data = full_train, params = params, nrounds = nrounds,
                                  folds = folds, metrics = list("logloss"),
-                                 early_stopping_rounds = 20, print_every_n = 50)
+                                 early_stopping_rounds = 10, print_every_n = 25)
   
   output <- params
   output$iter = wp_cv_model$best_iteration
@@ -171,7 +168,7 @@ get_metrics <- function(df, row = 1) {
 
 
 # get results
-results <- map_df(31 : 40, function(x) {
+results <- map_df(1 : nrow(grid), function(x) {
   
   gc()
   message(glue::glue("Row {x}"))
@@ -179,31 +176,6 @@ results <- map_df(31 : 40, function(x) {
   
 })
 
-# plot
-# results %>%
-#   select(logloss, eta, gamma, subsample, colsample_bytree, max_depth, min_child_weight) %>%
-#   pivot_longer(eta:min_child_weight,
-#                values_to = "value",
-#                names_to = "parameter"
-#   ) %>%
-#   ggplot(aes(value, logloss, color = parameter)) +
-#   geom_point(alpha = 0.8, show.legend = FALSE, size = 3) +
-#   facet_wrap(~parameter, scales = "free_x") +
-#   labs(x = NULL, y = "logloss") +
-#   theme_minimal()
+# at the end: need the saved modeling df
 
 
-# final best model
-#
-# eta 0.02
-# gamma 0.3445502
-# subsample 0.7204741
-# colsample_bytree 0.5714286
-# max_depth 5
-# min_child_weight 14
-# iter 760
-# logloss 0.4485878
-
-
-# https://parsnip.tidymodels.org/reference/boost_tree.html
-# https://xgboost.readthedocs.io/en/latest/parameter.html
