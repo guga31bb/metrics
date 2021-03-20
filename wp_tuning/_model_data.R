@@ -1,17 +1,10 @@
 library(tidyverse)
+future::plan("multisession")
 
-data <- purrr::map_df(2001 : 2020, function(x) {
-  readRDS(
-    
-    # from repo
-    url(glue::glue("https://raw.githubusercontent.com/guga31bb/nflfastR-data/master/data/play_by_play_{x}.rds"))
-    
-    # local
-    # glue::glue("data/play_by_play_{x}.rds")
-  )
-    
-}) %>%
+data <- nflfastR::load_pbp(2001:2020) %>%
   mutate(
+    # to fix bug in pit-ari game
+    result = home_score - away_score,
     Winner = if_else(home_score > away_score, home_team,
                      if_else(home_score < away_score, away_team, "TIE"))
   )
